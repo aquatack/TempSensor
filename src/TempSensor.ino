@@ -1,9 +1,4 @@
-/*
- * Project TempSensor
- * Description:
- * Author:
- * Date:
- */
+#include "MedianFilter.h"
 
 #define A_SYSTEMTEMP    A0
 
@@ -12,31 +7,8 @@ String deviceId;
 const int AVERAGECOUNT = 60;
 int reportCountIndex;
 float measurements[AVERAGECOUNT];
-const int filterDepth = 5;
-float elements[filterDepth] = {0.0f};
-float filteredElements[filterDepth];
-int filterIndexer = 0;
 
-int cmpfunc(const void *first, const void *second)
-{
-    return (*(int*)first - *(int*)second); // cast to ints. We only want sign out of this.
-}
-
-float medianFilter(float nextValue)
-{
-    elements[filterIndexer] = nextValue;
-    filterIndexer = (filterIndexer + 1) % 5;
-    memcpy(filteredElements, elements, sizeof(float)*filterDepth);
-
-    qsort(filteredElements, filterDepth, sizeof(float), cmpfunc);
-    for(int i = 0; i<5; i++)
-    {
-        Serial.printf("elements: %5.2f, filteredElements %5.2f\n", elements[i], filteredElements[i]);
-    }
-    float filteredValue = filteredElements[filterDepth / 2];
-    Serial.printf("::medianFilter: Input Value: %5.2f, filterIndexer: %d, output value: %5.2f\n", nextValue, filterIndexer, filteredValue);
-    return filteredValue;
-}
+MedianFilter* medianFilter = new MedianFilter();
 
 float getTempDegC(int adcInput)
 {
@@ -66,19 +38,16 @@ void setup() {
   Particle.publish("particle/device/name");
   reportCountIndex = AVERAGECOUNT;
 
-  //flush the median filter.
+  // Initialise the median filter.
   delay(100);
-  for(int i=0; i<filterDepth; i++)
-  {
-      medianFilter(getTempDegC(analogRead(A_SYSTEMTEMP)));
-  }
+  medianFilter->Initialise(getTempDegC(analogRead(A_SYSTEMTEMP)));
 }
 
 // loop() runs over and over again, as quickly as it can execute.
 void loop() {
   delay(100); // allow the ADC to settle.
   tempC = getTempDegC(analogRead(A_SYSTEMTEMP));
-  measurements[--reportCountIndex] = medianFilter(tempC);
+  measurements[--reportCountIndex] = medianFilter->Filter(tempC);
   Serial.printf("::loop: tempC: %5.2f, medianValue: %5.2f\n", tempC, measurements[reportCountIndex]);
 
   if(reportCountIndex <=0 )
