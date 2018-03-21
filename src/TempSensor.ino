@@ -1,4 +1,5 @@
 #include "MedianFilter.h"
+#include "Temp.h"
 
 #define A_SYSTEMTEMP    A0
 
@@ -8,45 +9,31 @@ const int AVERAGECOUNT = 60;
 int reportCountIndex;
 float measurements[AVERAGECOUNT];
 
+Temp* tempSensor = new Temp(A_SYSTEMTEMP);
 MedianFilter* medianFilter = new MedianFilter();
 
-float getTempDegC(int adcInput)
-{
-    const float offset_mV = 500.0;
-    const float scale_mV_degC = 10.0;
-    const float valPermV = 0.8; // 4096 steps between 0 and 3.3V
-
-    float mVOut = adcInput * valPermV;
-
-    // mVOut = offset_mV + T * scale_mV_degC
-    // (mVOut - offset_mV)/scale_mV_degC
-
-    float temperature = (mVOut - offset_mV) / scale_mV_degC;
-    return temperature;
-}
-
-void handler(const char *topic, const char *data) {
+void ParticlePublishHandler(const char *topic, const char *data) {
     deviceId = String(data);
     Particle.unsubscribe();
 }
 
 // setup() runs once, when the device is first turned on.
 void setup() {
-  pinMode(A0, INPUT);
+
   Serial.begin(9600);
-  Particle.subscribe("particle/device/name", handler);
+  Particle.subscribe("particle/device/name", ParticlePublishHandler);
   Particle.publish("particle/device/name");
   reportCountIndex = AVERAGECOUNT;
 
   // Initialise the median filter.
   delay(100);
-  medianFilter->Initialise(getTempDegC(analogRead(A_SYSTEMTEMP)));
+  medianFilter->Initialise(tempSensor->getTempDegC());
 }
 
 // loop() runs over and over again, as quickly as it can execute.
 void loop() {
   delay(100); // allow the ADC to settle.
-  tempC = getTempDegC(analogRead(A_SYSTEMTEMP));
+  tempC = tempSensor->getTempDegC();
   measurements[--reportCountIndex] = medianFilter->Filter(tempC);
   Serial.printf("::loop: tempC: %5.2f, medianValue: %5.2f\n", tempC, measurements[reportCountIndex]);
 
