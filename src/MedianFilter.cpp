@@ -19,7 +19,6 @@ float MedianFilter::Filter(float nextValue)
     elements[filterIndexer] = nextValue;
     filterIndexer = (filterIndexer + 1) % 5;
     memcpy(filteredElements, elements, sizeof(float)*filterDepth);
-
     qsort(filteredElements, filterDepth, sizeof(float), cmpfunc);
     for(int i = 0; i < 5; i++)
     {
