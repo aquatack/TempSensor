@@ -8,6 +8,7 @@ String deviceId;
 const int AVERAGECOUNT = 60;
 int reportCountIndex;
 float measurements[AVERAGECOUNT];
+const char dataChannel[] = "Sensor/Temperature";
 
 Temp* tempSensor = new Temp(A_SYSTEMTEMP);
 MedianFilter* medianFilter = new MedianFilter();
@@ -47,7 +48,7 @@ void loop() {
       }
       Serial.printf("::loop.publish: averageMeasurement: %f5.2\n", averageMeasurement);
       String tempString = String(averageMeasurement);
-      Particle.publish("Sensor/Temperature", deviceId + "," + tempString, PRIVATE);
+      Particle.publish(dataChannel, deviceId + "," + tempString, PRIVATE);
   }
 
   Serial.printf("System temp: %3.2fC\n", tempC);
