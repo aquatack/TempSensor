@@ -1,27 +1,19 @@
 #include "MedianFilter.h"
 #include "Temp.h"
 #include "AveragingFilter.h"
+#include "ParticleCloud.h"
 
 #define A_SYSTEMTEMP    A0
-
-String deviceId;
-const char dataChannel[] = "Sensor/Temperature";
 
 Temp* tempSensor = new Temp(A_SYSTEMTEMP);
 MedianFilter* medianFilter = new MedianFilter();
 AveragingFilter* averagingFilter = new AveragingFilter();
 
-void ParticlePublishHandler(const char *topic, const char *data) {
-    deviceId = String(data);
-    Particle.unsubscribe();
-}
-
 // setup() runs once, when the device is first turned on.
 void setup()
 {
   Serial.begin(9600);
-  Particle.subscribe("particle/device/name", ParticlePublishHandler);
-  Particle.publish("particle/device/name");
+  ParticleCloud::GetDeviceName();
 
   // Initialise the median filter.
   delay(100);
@@ -40,14 +32,8 @@ void loop() {
   {
       float averageMeasurement = averagingFilter->GetAverage();
       Serial.printf("::loop.publish: averageMeasurement: %5.2f\n", averageMeasurement);
-      String tempString = String(averageMeasurement);
-      Particle.publish(dataChannel, deviceId + "," + tempString, PRIVATE);
+      ParticleCloud::PublishTemperature(averageMeasurement);
   }
-
-  Serial.printf("System temp: %3.2fC\n", tempC);
-  char buff[50];
-  deviceId.toCharArray(buff, 50);
-  Serial.printf("%s\n", buff);
 
   delay(900);
 }
